@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>体重記録アプリ</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif;
+      background: #f0f4f8;
+      color: #2d3748;
+      font-size: 16px;
+      min-height: 100vh;
+    }
+
+    header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 16px 20px;
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    header h1 {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    header p {
+      font-size: 12px;
+      opacity: 0.85;
+      margin-top: 2px;
+    }
+
+    .container {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+
+    /* カード */
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    }
+
+    .card-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #4a5568;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-title::before {
+      content: '';
+      width: 4px;
+      height: 18px;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      border-radius: 2px;
+    }
+
+    /* フォーム */
+    .form-row {
+      margin-bottom: 14px;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #718096;
+      margin-bottom: 6px;
+    }
+
+    input[type="number"],
+    input[type="date"],
+    select {
+      width: 100%;
+      padding: 12px 14px;
+      border: 2px solid #e2e8f0;
+      border-radius: 10px;
+      font-size: 16px;
+      color: #2d3748;
+      background: #f7fafc;
+      transition: border-color 0.2s, background 0.2s;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+
+    input[type="number"]:focus,
+    input[type="date"]:focus,
+    select:focus {
+      outline: none;
+      border-color: #667eea;
+      background: white;
+    }
+
+    /* ラジオボタン（朝・晩） */
+    .radio-group {
+      display: flex;
+      gap: 10px;
+    }
+
+    .radio-group label {
+      flex: 1;
+      margin: 0;
+    }
+
+    .radio-group input[type="radio"] {
+      display: none;
+    }
+
+    .radio-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px;
+      border: 2px solid #e2e8f0;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: 600;
+      color: #718096;
+      background: #f7fafc;
+      transition: all 0.2s;
+      user-select: none;
+    }
+
+    .radio-group input[type="radio"]:checked + .radio-btn {
+      border-color: #667eea;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+    }
+
+    /* ボタン */
+    .btn {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      box-shadow: 0 4px 12px rgba(102,126,234,0.4);
+    }
+
+    .btn-primary:active {
+      transform: scale(0.97);
+      box-shadow: 0 2px 6px rgba(102,126,234,0.3);
+    }
+
+    .btn-delete {
+      background: none;
+      border: none;
+      color: #fc8181;
+      font-size: 18px;
+      padding: 6px 10px;
+      cursor: pointer;
+      border-radius: 6px;
+      transition: background 0.2s;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .btn-delete:active {
+      background: #fff5f5;
+    }
+
+    /* グラフタブ */
+    .tab-container {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 16px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 2px;
+    }
+
+    .tab-container::-webkit-scrollbar {
+      display: none;
+    }
+
+    .tab-btn {
+      flex: none;
+      padding: 8px 16px;
+      border: 2px solid #e2e8f0;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      background: white;
+      color: #718096;
+      white-space: nowrap;
+      transition: all 0.2s;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .tab-btn.active {
+      border-color: #667eea;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+    }
+
+    .chart-wrapper {
+      position: relative;
+      height: 220px;
+    }
+
+    /* テーブル */
+    .table-scroll {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      margin: 0 -4px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      min-width: 340px;
+    }
+
+    thead {
+      background: #f7fafc;
+    }
+
+    th {
+      padding: 10px 8px;
+      text-align: center;
+      font-weight: 700;
+      color: #718096;
+      border-bottom: 2px solid #e2e8f0;
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 10px 8px;
+      text-align: center;
+      border-bottom: 1px solid #edf2f7;
+      color: #2d3748;
+    }
+
+    td:first-child {
+      text-align: left;
+      white-space: nowrap;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover td {
+      background: #f7fafc;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .badge-morning {
+      background: #fef3c7;
+      color: #d97706;
+    }
+
+    .badge-evening {
+      background: #e0e7ff;
+      color: #6366f1;
+    }
+
+    .empty-message {
+      text-align: center;
+      color: #a0aec0;
+      font-size: 14px;
+      padding: 32px 0;
+    }
+
+    .empty-message .icon {
+      font-size: 40px;
+      margin-bottom: 8px;
+    }
+
+    /* トースト通知 */
+    #toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: #2d3748;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 24px;
+      font-size: 14px;
+      font-weight: 600;
+      z-index: 999;
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      white-space: nowrap;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    }
+
+    #toast.show {
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* サマリー */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 4px;
+    }
+
+    .summary-item {
+      background: #f7fafc;
+      border-radius: 12px;
+      padding: 12px;
+      text-align: center;
+    }
+
+    .summary-item .label {
+      font-size: 11px;
+      color: #a0aec0;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .summary-item .value {
+      font-size: 22px;
+      font-weight: 800;
+      color: #667eea;
+    }
+
+    .summary-item .unit {
+      font-size: 11px;
+      color: #a0aec0;
+      margin-left: 2px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>体重記録アプリ</h1>
+  <p>毎日の健康データを記録しよう</p>
+</header>
+
+<div class="container">
+
+  <!-- 入力フォーム -->
+  <div class="card">
+    <div class="card-title">記録を追加</div>
+
+    <div class="form-row">
+      <label>日付</label>
+      <input type="date" id="inputDate">
+    </div>
+
+    <div class="form-row">
+      <label>時間帯</label>
+      <div class="radio-group">
+        <label>
+          <input type="radio" name="timeOfDay" value="morning" checked>
+          <span class="radio-btn">🌅 朝</span>
+        </label>
+        <label>
+          <input type="radio" name="timeOfDay" value="evening">
+          <span class="radio-btn">🌙 晩</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <label>体重 (kg)</label>
+      <input type="number" id="inputWeight" placeholder="例: 70.5" step="0.1" min="0" max="300">
+    </div>
+
+    <div class="form-row">
+      <label>体脂肪率 (%)</label>
+      <input type="number" id="inputBodyFat" placeholder="例: 22.3" step="0.1" min="0" max="100">
+    </div>
+
+    <div class="form-row">
+      <label>内臓脂肪レベル</label>
+      <input type="number" id="inputVisceralFat" placeholder="例: 8" step="0.5" min="0" max="30">
+    </div>
+
+    <div class="form-row">
+      <label>BMI</label>
+      <input type="number" id="inputBmi" placeholder="例: 23.4" step="0.1" min="0" max="60">
+    </div>
+
+    <button class="btn btn-primary" onclick="saveRecord()">記録を保存</button>
+  </div>
+
+  <!-- サマリー -->
+  <div class="card" id="summaryCard" style="display:none;">
+    <div class="card-title">最新の記録</div>
+    <div class="summary-grid">
+      <div class="summary-item">
+        <div class="label">体重</div>
+        <div class="value" id="latestWeight">--<span class="unit">kg</span></div>
+      </div>
+      <div class="summary-item">
+        <div class="label">体脂肪率</div>
+        <div class="value" id="latestBodyFat">--<span class="unit">%</span></div>
+      </div>
+      <div class="summary-item">
+        <div class="label">内臓脂肪</div>
+        <div class="value" id="latestVisceralFat">--</div>
+      </div>
+      <div class="summary-item">
+        <div class="label">BMI</div>
+        <div class="value" id="latestBmi">--</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- グラフ -->
+  <div class="card" id="chartCard" style="display:none;">
+    <div class="card-title">推移グラフ</div>
+    <div class="tab-container">
+      <button class="tab-btn active" onclick="switchTab('weight', this)">体重</button>
+      <button class="tab-btn" onclick="switchTab('bodyFat', this)">体脂肪率</button>
+      <button class="tab-btn" onclick="switchTab('visceralFat', this)">内臓脂肪</button>
+      <button class="tab-btn" onclick="switchTab('bmi', this)">BMI</button>
+    </div>
+    <div class="chart-wrapper">
+      <canvas id="healthChart"></canvas>
+    </div>
+  </div>
+
+  <!-- 記録一覧 -->
+  <div class="card">
+    <div class="card-title">記録一覧</div>
+    <div id="recordList">
+      <div class="empty-message">
+        <div class="icon">📋</div>
+        まだ記録がありません
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- トースト -->
+<div id="toast"></div>
+
+<script>
+  // ===== 定数 =====
+  const STORAGE_KEY = 'healthRecords';
+  let chart = null;
+  let currentTab = 'weight';
+
+  const TAB_CONFIG = {
+    weight:      { label: '体重',     unit: 'kg', color: '#667eea' },
+    bodyFat:     { label: '体脂肪率', unit: '%',  color: '#f093fb' },
+    visceralFat: { label: '内臓脂肪', unit: '',   color: '#4facfe' },
+    bmi:         { label: 'BMI',      unit: '',   color: '#43e97b' },
+  };
+
+  // ===== 初期化 =====
+  function init() {
+    // 今日の日付をセット
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm   = String(today.getMonth() + 1).padStart(2, '0');
+    const dd   = String(today.getDate()).padStart(2, '0');
+    document.getElementById('inputDate').value = `${yyyy}-${mm}-${dd}`;
+
+    renderAll();
+  }
+
+  // ===== データ操作 =====
+  function loadRecords() {
+    try {
+      return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+    } catch {
+      return [];
+    }
+  }
+
+  function saveRecords(records) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+  }
+
+  function saveRecord() {
+    const date        = document.getElementById('inputDate').value;
+    const timeOfDay   = document.querySelector('input[name="timeOfDay"]:checked').value;
+    const weight      = parseFloat(document.getElementById('inputWeight').value);
+    const bodyFat     = parseFloat(document.getElementById('inputBodyFat').value);
+    const visceralFat = parseFloat(document.getElementById('inputVisceralFat').value);
+    const bmi         = parseFloat(document.getElementById('inputBmi').value);
+
+    if (!date) {
+      showToast('⚠️ 日付を入力してください');
+      return;
+    }
+
+    if (isNaN(weight) && isNaN(bodyFat) && isNaN(visceralFat) && isNaN(bmi)) {
+      showToast('⚠️ 少なくとも1つの数値を入力してください');
+      return;
+    }
+
+    const record = {
+      id:          Date.now(),
+      date,
+      timeOfDay,
+      weight:      isNaN(weight)      ? null : weight,
+      bodyFat:     isNaN(bodyFat)     ? null : bodyFat,
+      visceralFat: isNaN(visceralFat) ? null : visceralFat,
+      bmi:         isNaN(bmi)         ? null : bmi,
+    };
+
+    const records = loadRecords();
+    records.unshift(record); // 新しい順に先頭へ
+    saveRecords(records);
+
+    // フォームクリア（日付・時間帯は維持）
+    document.getElementById('inputWeight').value      = '';
+    document.getElementById('inputBodyFat').value     = '';
+    document.getElementById('inputVisceralFat').value = '';
+    document.getElementById('inputBmi').value         = '';
+
+    renderAll();
+    showToast('✅ 記録を保存しました');
+  }
+
+  function deleteRecord(id) {
+    if (!confirm('この記録を削除しますか？')) return;
+    const records = loadRecords().filter(r => r.id !== id);
+    saveRecords(records);
+    renderAll();
+    showToast('🗑️ 削除しました');
+  }
+
+  // ===== 表示 =====
+  function renderAll() {
+    const records = loadRecords();
+    renderSummary(records);
+    renderChart(records);
+    renderTable(records);
+  }
+
+  function renderSummary(records) {
+    const card = document.getElementById('summaryCard');
+    if (records.length === 0) {
+      card.style.display = 'none';
+      return;
+    }
+    card.style.display = 'block';
+
+    // 最新レコード
+    const latest = records[0];
+
+    const fmt = (v, unit) => v !== null ? `${v}${unit ? '<span class="unit">' + unit + '</span>' : ''}` : '--';
+
+    document.getElementById('latestWeight').innerHTML      = fmt(latest.weight,      'kg');
+    document.getElementById('latestBodyFat').innerHTML     = fmt(latest.bodyFat,     '%');
+    document.getElementById('latestVisceralFat').innerHTML = fmt(latest.visceralFat, '');
+    document.getElementById('latestBmi').innerHTML         = fmt(latest.bmi,         '');
+  }
+
+  function renderChart(records) {
+    const card = document.getElementById('chartCard');
+    if (records.length < 2) {
+      card.style.display = 'none';
+      return;
+    }
+    card.style.display = 'block';
+
+    // 日付順にソートしてグラフ用データ作成
+    const sorted = [...records].sort((a, b) => {
+      if (a.date !== b.date) return a.date.localeCompare(b.date);
+      return a.timeOfDay === 'morning' ? -1 : 1;
+    });
+
+    const labels = sorted.map(r => {
+      const d  = r.date.slice(5); // MM-DD
+      const t  = r.timeOfDay === 'morning' ? '朝' : '晩';
+      return `${d} ${t}`;
+    });
+
+    const cfg = TAB_CONFIG[currentTab];
+    const data = sorted.map(r => r[currentTab]);
+
+    const ctx = document.getElementById('healthChart').getContext('2d');
+
+    if (chart) {
+      chart.destroy();
+    }
+
+    chart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          label: cfg.label + (cfg.unit ? ` (${cfg.unit})` : ''),
+          data,
+          borderColor: cfg.color,
+          backgroundColor: cfg.color + '22',
+          borderWidth: 2.5,
+          pointBackgroundColor: cfg.color,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          tension: 0.35,
+          fill: true,
+          spanGaps: true,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => {
+                const v = ctx.parsed.y;
+                return v !== null ? `${cfg.label}: ${v}${cfg.unit}` : 'データなし';
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            ticks: {
+              font:       { size: 10 },
+              maxRotation: 45,
+              color: '#a0aec0',
+            },
+            grid: { color: '#edf2f7' }
+          },
+          y: {
+            ticks: {
+              font:  { size: 11 },
+              color: '#a0aec0',
+            },
+            grid: { color: '#edf2f7' }
+          }
+        }
+      }
+    });
+  }
+
+  function renderTable(records) {
+    const container = document.getElementById('recordList');
+
+    if (records.length === 0) {
+      container.innerHTML = `
+        <div class="empty-message">
+          <div class="icon">📋</div>
+          まだ記録がありません
+        </div>`;
+      return;
+    }
+
+    const rows = records.map(r => {
+      const badge   = r.timeOfDay === 'morning'
+        ? '<span class="badge badge-morning">朝</span>'
+        : '<span class="badge badge-evening">晩</span>';
+
+      const fmt = v => v !== null ? v : '-';
+
+      return `
+        <tr>
+          <td>
+            <div style="font-weight:700;font-size:13px;">${formatDate(r.date)}</div>
+            <div style="margin-top:3px;">${badge}</div>
+          </td>
+          <td>${fmt(r.weight)}</td>
+          <td>${fmt(r.bodyFat)}</td>
+          <td>${fmt(r.visceralFat)}</td>
+          <td>${fmt(r.bmi)}</td>
+          <td>
+            <button class="btn-delete" onclick="deleteRecord(${r.id})" aria-label="削除">✕</button>
+          </td>
+        </tr>`;
+    }).join('');
+
+    container.innerHTML = `
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>日付・時間帯</th>
+              <th>体重<br><small style="font-weight:400;color:#cbd5e0;">kg</small></th>
+              <th>体脂肪<br><small style="font-weight:400;color:#cbd5e0;">%</small></th>
+              <th>内臓<br><small style="font-weight:400;color:#cbd5e0;">レベル</small></th>
+              <th>BMI</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+  }
+
+  // ===== タブ切り替え =====
+  function switchTab(tab, btn) {
+    currentTab = tab;
+
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    renderChart(loadRecords());
+  }
+
+  // ===== ユーティリティ =====
+  function formatDate(dateStr) {
+    if (!dateStr) return '';
+    const [y, m, d] = dateStr.split('-');
+    return `${y}/${m}/${d}`;
+  }
+
+  function showToast(msg) {
+    const toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2200);
+  }
+
+  // ===== 起動 =====
+  init();
+</script>
+</body>
+</html>
