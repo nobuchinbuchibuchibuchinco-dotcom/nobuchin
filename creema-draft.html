@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Creema 出品ドラフト｜押し花 全8点</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Meiryo", sans-serif;
+      background: #faf8f5;
+      color: #3a3228;
+      padding: 16px;
+      font-size: 14px;
+      line-height: 1.7;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 1.3rem;
+      font-weight: bold;
+      color: #7a5c4a;
+      margin-bottom: 6px;
+      letter-spacing: 0.05em;
+    }
+
+    .page-note {
+      text-align: center;
+      font-size: 12px;
+      color: #a08070;
+      margin-bottom: 24px;
+    }
+
+    .cards {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      max-width: 780px;
+      margin: 0 auto;
+    }
+
+    .card {
+      background: #fff;
+      border: 1px solid #e8ddd4;
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(120,90,70,0.07);
+    }
+
+    .card-header {
+      background: linear-gradient(135deg, #c9a98a 0%, #e0c4a8 100%);
+      color: #fff;
+      padding: 14px 20px;
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+    }
+
+    .card-num {
+      font-size: 1.6rem;
+      font-weight: bold;
+      line-height: 1;
+    }
+
+    .card-subtitle {
+      font-size: 1.05rem;
+      font-weight: bold;
+      letter-spacing: 0.04em;
+    }
+
+    .card-body {
+      padding: 16px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .field-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .field-label {
+      font-size: 11px;
+      font-weight: bold;
+      letter-spacing: 0.08em;
+      color: #a08070;
+      text-transform: uppercase;
+      background: #f5ede5;
+      padding: 2px 8px;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+
+    .copy-btn {
+      font-size: 11px;
+      padding: 3px 12px;
+      background: #c9a98a;
+      color: #fff;
+      border: none;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .copy-btn:hover {
+      background: #b08060;
+    }
+
+    .copy-btn:active {
+      transform: scale(0.95);
+    }
+
+    .copy-btn.copied {
+      background: #7ab87a;
+    }
+
+    .field-value {
+      background: #fdf9f6;
+      border: 1px solid #ecddd2;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 14px;
+      color: #3a3228;
+      white-space: pre-wrap;
+      word-break: break-word;
+      line-height: 1.75;
+    }
+
+    .field-value.single-line {
+      font-size: 15px;
+      font-weight: bold;
+      color: #5a3e2e;
+      padding: 9px 14px;
+    }
+
+    .field-value.status-badge {
+      font-size: 13px;
+      font-weight: bold;
+      color: #6a9e6a;
+      background: #f0faf0;
+      border-color: #b8ddb8;
+      padding: 7px 14px;
+    }
+
+    .divider {
+      height: 1px;
+      background: linear-gradient(to right, transparent, #e0cfc5, transparent);
+      margin: 4px 0;
+    }
+
+    @media (max-width: 480px) {
+      body { padding: 10px; }
+      .card-header { padding: 12px 14px; }
+      .card-body { padding: 12px 14px; }
+      .card-num { font-size: 1.3rem; }
+      .card-subtitle { font-size: 0.95rem; }
+    }
+  </style>
+</head>
+<body>
+
+<h1>🌸 Creema 出品ドラフト｜押し花 全8点</h1>
+<p class="page-note">各項目の「コピー」ボタンを押すと、クリップボードにコピーされます</p>
+
+<div class="cards" id="cards"></div>
+
+<script>
+const subtitles = [
+  "〜春の山の移ろい〜",
+  "〜恋のはじまり〜",
+  "〜いつもの道にそっと〜",
+  "〜桜餅をたずさえて〜",
+  "〜レモン飴の思い出〜",
+  "〜明日を待ちわびて眠りへ〜",
+  "〜淡い記憶〜",
+  "〜チョコレートを添えて〜",
+];
+
+const nums = ["①","②","③","④","⑤","⑥","⑦","⑧"];
+
+const description = `まるで本の栞に挟んだ押し花が、そのままブローチになったような作品です。
+メッシュ素材ならではの透け感が、葉脈のひとすじを際立たせ、光の中でそっときらめきます。葉の陰にひっそりと咲く小花との対比が、野に咲く花をそのまま切り取ったような自然な美しさを生み出しています。
+メッシュクラフトの技法で立体に仕立てながら、あえて花びらにだけそっと動きを添えました。風にゆれるような、生きている花のような、そんなかすかな表情をお楽しみください。
+主張しすぎないナチュラルなたたずまいは、普段着のワンポイントから、ちょっと特別なお出かけまで、毎日そっと寄り添ってくれます。
+8色の『押し花』から、あなたの日々に寄り添う一枝が見つかると嬉しいです。❋ 作品について❋
+メッシュクラフトという技法を用い、ワイヤーで輪郭を造り、伸縮性のあるメッシュクロスをキュッとかけ、ひとパーツずつ丁寧にお作りしています。
+特定の花ではないからこそ、手にした方の「想い」を乗せられるように、季節も気にすることなくお付けいただけるようにと作成しました。
+
+✱ こだわりの「軽さ」✱
+伸縮性のあるメッシュ素材でできているため、驚くほど軽い付け心地なのが自慢です。
+重さはサイズと共に掲載していますので目安にしてください。
+
+
+✢ サイズ（約）✢
+横cm × 縦cm × 高さcm ／ 重さ：片耳約3g「1円玉3枚分という驚きの軽さ」
+※高さは金具を除いた本体の寸法です。
+
+✤*✤お色違いもございます✤*✤
+
+❉ お届けについて❉
+作品の繊細なフォルムを守るため、専用の小箱に入れて大切にお届けいたします。
+自分へのご褒美や、大切な方へのギフトにも最適です。
+
+
+                 *❋*メッシュクラフトについて*❋*
+専用ワイヤーで形を作り、メッシュクロスをかけ専用糸でくくったパーツを花や葉に組み上げて制作しています。
+とても軽く、透け感のあるやわらかな表情が特徴です。
+
+
+          ✣✤✢長く使用するための取扱いと説明✢✤✣
+使用時に丁寧に扱っていただき保管も箱等に入れていただけますと10年経っても変わらず使用していただけます。
+下記、注意点を記載しておりますので御一読お願いします。
+
+・メッシュクロスはストッキング素材に似て いるため 伝線や埃を引きつけやすい など気をつける点が類似しています。
+・花びら等の枠をワイヤーで作っていますので、濡れた際には乾いたハンカチやタオルでやさしく拭き取って下さい。放置すると錆びにつながる恐れがあります。
+・強度の強いワイヤー使用でないため、強い力や圧迫で形が変わります。
+破損した場合や潰れきってしまうと元に戻すことはできませんが、少し変形した状態でしたら枠のワイヤーを軽く動かして直すことで元に戻ります。
+・メッシュクロスは引っ掻きにより伝線したり破れることがあります。
+・直射日光の当たるところに数年飾ると脱色、素材の劣化で朽ちて破れます。`;
+
+function makeCopyBtn(text, btnId) {
+  return `<button class="copy-btn" id="${btnId}" onclick="copyText(this, \`${escapeForAttr(text)}\`)">コピー</button>`;
+}
+
+function escapeForAttr(str) {
+  return str.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$/g, '\\$');
+}
+
+function copyText(btn, text) {
+  navigator.clipboard.writeText(text).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = "✓ コピー済";
+    btn.classList.add("copied");
+    setTimeout(() => {
+      btn.textContent = "コピー";
+      btn.classList.remove("copied");
+    }, 1800);
+  }).catch(() => {
+    // フォールバック
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    document.execCommand("copy");
+    document.body.removeChild(ta);
+    btn.textContent = "✓ コピー済";
+    btn.classList.add("copied");
+    setTimeout(() => {
+      btn.textContent = "コピー";
+      btn.classList.remove("copied");
+    }, 1800);
+  });
+}
+
+const container = document.getElementById("cards");
+
+subtitles.forEach((subtitle, i) => {
+  const n = i + 1;
+  const titleText = "押し花";
+  const fullTitle = `押し花 ${subtitle}`;
+
+  const card = document.createElement("div");
+  card.className = "card";
+
+  card.innerHTML = `
+    <div class="card-header">
+      <span class="card-num">${nums[i]}</span>
+      <span class="card-subtitle">${subtitle}</span>
+    </div>
+    <div class="card-body">
+
+      <div class="field">
+        <div class="field-header">
+          <span class="field-label">タイトル（メインのみ）</span>
+          <button class="copy-btn" onclick="copyText(this, '${titleText}')">コピー</button>
+        </div>
+        <div class="field-value single-line">${titleText}</div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="field">
+        <div class="field-header">
+          <span class="field-label">サブタイトル</span>
+          <button class="copy-btn" onclick="copyText(this, '${subtitle}')">コピー</button>
+        </div>
+        <div class="field-value single-line">${subtitle}</div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="field">
+        <div class="field-header">
+          <span class="field-label">タイトル全体（メイン＋サブ）</span>
+          <button class="copy-btn" onclick="copyText(this, '${fullTitle}')">コピー</button>
+        </div>
+        <div class="field-value single-line">${fullTitle}</div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="field">
+        <div class="field-header">
+          <span class="field-label">ステータス</span>
+        </div>
+        <div class="field-value status-badge">展示する</div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="field">
+        <div class="field-header">
+          <span class="field-label">商品説明文</span>
+          <button class="copy-btn" onclick="copyText(this, descriptionText)">コピー</button>
+        </div>
+        <div class="field-value desc-text">${escapeHtml(description)}</div>
+      </div>
+
+    </div>
+  `;
+
+  container.appendChild(card);
+});
+
+// descriptionTextをグローバルに持たせる
+window.descriptionText = description;
+
+function escapeHtml(str) {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+</script>
+</body>
+</html>
