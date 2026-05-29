@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>おやつ記録（1歳児）</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+    background: #fff7f2;
+    color: #5b4a45;
+    padding: 16px;
+    max-width: 520px;
+    margin: 0 auto;
+  }
+  h1 {
+    font-size: 22px;
+    text-align: center;
+    margin: 8px 0 4px;
+    color: #e08aa0;
+  }
+  .sub {
+    text-align: center;
+    font-size: 13px;
+    color: #b08;
+    margin-bottom: 14px;
+    color: #a98d86;
+  }
+  .card {
+    background: #fff;
+    border-radius: 18px;
+    padding: 16px;
+    margin-bottom: 14px;
+    box-shadow: 0 3px 10px rgba(224,138,160,0.12);
+  }
+  .date-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+  }
+  .date-row button {
+    background: #ffe0ea;
+    border: none;
+    border-radius: 12px;
+    font-size: 22px;
+    width: 48px;
+    height: 48px;
+    color: #e08aa0;
+  }
+  input[type="date"] {
+    font-size: 16px;
+    padding: 10px;
+    border: 2px solid #ffe0ea;
+    border-radius: 12px;
+    background: #fff;
+    color: #5b4a45;
+  }
+  .meter-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 15px;
+    font-weight: bold;
+    margin-bottom: 6px;
+  }
+  .meter-value { font-size: 18px; }
+  .bar-bg {
+    background: #f1e9e6;
+    border-radius: 10px;
+    height: 16px;
+    overflow: hidden;
+    margin-bottom: 6px;
+  }
+  .bar-fill {
+    height: 100%;
+    border-radius: 10px;
+    transition: width .3s;
+  }
+  .green  { background:#8fd19e; }
+  .yellow { background:#f6cb5c; }
+  .red    { background:#f08a8a; }
+  .badge {
+    display:inline-block;
+    padding:3px 10px;
+    border-radius:20px;
+    font-size:13px;
+    font-weight:bold;
+    color:#fff;
+  }
+  .note {
+    font-size:11px;
+    color:#a98d86;
+    margin-top:4px;
+    line-height:1.5;
+  }
+  .msg {
+    background:#fff3d6;
+    border:2px solid #f6cb5c;
+    border-radius:14px;
+    padding:12px;
+    font-size:14px;
+    margin-bottom:14px;
+    line-height:1.6;
+    color:#8a6d00;
+  }
+  label.field {
+    display:block;
+    font-size:14px;
+    font-weight:bold;
+    margin:10px 0 4px;
+  }
+  select, input[type="number"], input[type="text"] {
+    width:100%;
+    font-size:17px;
+    padding:13px;
+    border:2px solid #ffe0ea;
+    border-radius:12px;
+    background:#fffafc;
+    color:#5b4a45;
+  }
+  .btn-add {
+    width:100%;
+    margin-top:14px;
+    background:#e08aa0;
+    color:#fff;
+    border:none;
+    border-radius:14px;
+    font-size:19px;
+    font-weight:bold;
+    padding:16px;
+  }
+  .btn-add:active { background:#c9758c; }
+  table { width:100%; border-collapse:collapse; }
+  th, td {
+    padding:10px 6px;
+    text-align:left;
+    font-size:14px;
+    border-bottom:1px solid #f1e9e6;
+  }
+  th { color:#a98d86; font-size:12px; }
+  td.num { text-align:right; }
+  .del {
+    background:#ffe0ea;
+    border:none;
+    color:#e08aa0;
+    border-radius:10px;
+    font-size:15px;
+    padding:8px 12px;
+    font-weight:bold;
+  }
+  .empty { text-align:center; color:#c4b5b0; padding:18px 0; font-size:14px; }
+  .total-row td { font-weight:bold; color:#5b4a45; border-top:2px solid #ffe0ea; }
+  .hidden { display:none; }
+</style>
+</head>
+<body>
+  <h1>おやつ記録</h1>
+  <div class="sub">1歳児のおやつ・フルーツのきろく</div>
+
+  <!-- 日付切り替え -->
+  <div class="card">
+    <div class="date-row">
+      <button id="prevDay" aria-label="前の日">‹</button>
+      <input type="date" id="datePicker">
+      <button id="nextDay" aria-label="次の日">›</button>
+    </div>
+  </div>
+
+  <!-- 目安メーター -->
+  <div class="card">
+    <div class="meter-label">
+      <span>🍪 おやつ合計カロリー</span>
+      <span class="badge" id="kcalBadge">—</span>
+    </div>
+    <div class="bar-bg"><div class="bar-fill green" id="kcalBar" style="width:0%"></div></div>
+    <div class="meter-value" id="kcalText">0 kcal</div>
+    <div class="note">目安：100〜150kcal（150以下=緑 / 151〜200=黄 / 201以上=赤）</div>
+  </div>
+
+  <div class="card">
+    <div class="meter-label">
+      <span>🍓 フルーツ合計量</span>
+      <span class="badge" id="fruitBadge">—</span>
+    </div>
+    <div class="bar-bg"><div class="bar-fill green" id="fruitBar" style="width:0%"></div></div>
+    <div class="meter-value" id="fruitText">0 g</div>
+    <div class="note">目安：100〜150g（150以下=緑 / 151〜200=黄 / 201以上=赤）<br>
+    ※フルーツは食べ過ぎると糖分や食物繊維でお腹に負担がかかり、軟便の原因になることがあります。</div>
+  </div>
+
+  <!-- やさしいメッセージ -->
+  <div class="msg hidden" id="careMsg"></div>
+
+  <!-- 入力 -->
+  <div class="card">
+    <label class="field" for="foodSelect">食材をえらぶ</label>
+    <select id="foodSelect"></select>
+
+    <div id="customWrap" class="hidden">
+      <label class="field" for="customName">食材の名前</label>
+      <input type="text" id="customName" placeholder="例：プリン">
+      <label class="field" for="customKcal">100gあたりのカロリー (kcal)</label>
+      <input type="number" id="customKcal" inputmode="numeric" placeholder="例：120">
+    </div>
+
+    <label class="field" for="gramInput">量 (グラム)</label>
+    <input type="number" id="gramInput" inputmode="numeric" placeholder="例：50">
+
+    <button class="btn-add" id="addBtn">＋ 今日のリストに追加</button>
+  </div>
+
+  <!-- 一覧 -->
+  <div class="card">
+    <table>
+      <thead>
+        <tr><th>食材</th><th class="num">量</th><th class="num">kcal</th><th></th></tr>
+      </thead>
+      <tbody id="listBody"></tbody>
+    </table>
+  </div>
+
+<script>
+(function(){
+  "use strict";
+
+  // 食材マスタ（type: fruit = フルーツ, other = いも・その他）
+  var FOODS = [
+    {name:"バナナ", kcal:86, type:"fruit"},
+    {name:"りんご", kcal:53, type:"fruit"},
+    {name:"みかん", kcal:45, type:"fruit"},
+    {name:"いちご", kcal:31, type:"fruit"},
+    {name:"ぶどう", kcal:59, type:"fruit"},
+    {name:"なし", kcal:38, type:"fruit"},
+    {name:"もも", kcal:38, type:"fruit"},
+    {name:"キウイ", kcal:50, type:"fruit"},
+    {name:"柿", kcal:63, type:"fruit"},
+    {name:"すいか", kcal:37, type:"fruit"},
+    {name:"メロン", kcal:42, type:"fruit"},
+    {name:"さつまいも（蒸し/レンチン）", kcal:130, type:"other"},
+    {name:"かぼちゃ", kcal:78, type:"other"},
+    {name:"蒸しパン", kcal:220, type:"other"},
+    {name:"赤ちゃんせんべい", kcal:390, type:"other"},
+    {name:"ヨーグルト（無糖）", kcal:56, type:"other"}
+  ];
+
+  var KEY_PREFIX = "snackTracker_";
+
+  var foodSelect = document.getElementById("foodSelect");
+  var customWrap = document.getElementById("customWrap");
+  var customName = document.getElementById("customName");
+  var customKcal = document.getElementById("customKcal");
+  var gramInput  = document.getElementById("gramInput");
+  var addBtn     = document.getElementById("addBtn");
+  var listBody   = document.getElementById("listBody");
+  var datePicker = document.getElementById("datePicker");
+  var careMsg    = document.getElementById("careMsg");
+
+  // プルダウン作成
+  function buildSelect(){
+    var html = "";
+    var fruits = FOODS.filter(function(f){return f.type==="fruit";});
+    var others = FOODS.filter(function(f){return f.type==="other";});
+    html += '<optgroup label="フルーツ">';
+    fruits.forEach(function(f,i){
+      var idx = FOODS.indexOf(f);
+      html += '<option value="'+idx+'">'+f.name+'（'+f.kcal+'kcal/100g）</option>';
+    });
+    html += '</optgroup><optgroup label="いも・その他">';
+    others.forEach(function(f){
+      var idx = FOODS.indexOf(f);
+      html += '<option value="'+idx+'">'+f.name+'（'+f.kcal+'kcal/100g）</option>';
+    });
+    html += '</optgroup>';
+    html += '<option value="custom">その他（自分でカロリーを入力）</option>';
+    foodSelect.innerHTML = html;
+  }
+
+  // 日付ユーティリティ
+  function todayStr(){
+    var d = new Date();
+    var off = d.getTimezoneOffset();
+    var local = new Date(d.getTime() - off*60000);
+    return local.toISOString().slice(0,10);
+  }
+  function shiftDate(str, days){
+    var parts = str.split("-");
+    var d = new Date(parts[0], parts[1]-1, parts[2]);
+    d.setDate(d.getDate()+days);
+    var y=d.getFullYear(), m=("0"+(d.getMonth()+1)).slice(-2), da=("0"+d.getDate()).slice(-2);
+    return y+"-"+m+"-"+da;
+  }
+
+  function load(date){
+    try {
+      var raw = localStorage.getItem(KEY_PREFIX+date);
+      return raw ? JSON.parse(raw) : [];
+    } catch(e){ return []; }
+  }
+  function save(date, items){
+    try { localStorage.setItem(KEY_PREFIX+date, JSON.stringify(items)); } catch(e){}
+  }
+
+  function judge(value, lowMax, midMax){
+    if(value <= lowMax) return "green";
+    if(value <= midMax) return "yellow";
+    return "red";
+  }
+  function badgeText(cls){
+    return cls==="green" ? "OK" : (cls==="yellow" ? "やや多い" : "多すぎ");
+  }
+
+  function render(){
+    var date = datePicker.value;
+    var items = load(date);
+    listBody.innerHTML = "";
+
+    var totalKcal = 0;
+    var fruitGram = 0;
+
+    if(items.length === 0){
+      listBody.innerHTML = '<tr><td colspan="4" class="empty">まだ記録がありません</td></tr>';
+    } else {
+      items.forEach(function(it, i){
+        totalKcal += it.kcal;
+        if(it.type === "fruit") fruitGram += it.gram;
+        var tr = document.createElement("tr");
+        tr.innerHTML =
+          '<td>'+escapeHtml(it.name)+'</td>'+
+          '<td class="num">'+it.gram+'g</td>'+
+          '<td class="num">'+it.kcal+'</td>'+
+          '<td class="num"><button class="del" data-i="'+i+'">削除</button></td>';
+        listBody.appendChild(tr);
+      });
+      var tot = document.createElement("tr");
+      tot.className = "total-row";
+      tot.innerHTML = '<td>合計</td><td class="num">'+fruitGram+'g※</td><td class="num">'+totalKcal+'</td><td></td>';
+      listBody.appendChild(tot);
+    }
+
+    // カロリーメーター
+    var kCls = judge(totalKcal, 150, 200);
+    setMeter("kcal", totalKcal, 200, kCls, totalKcal+" kcal", badgeText(kCls));
+
+    // フルーツメーター
+    var fCls = judge(fruitGram, 150, 200);
+    setMeter("fruit", fruitGram, 200, fCls, fruitGram+" g", badgeText(fCls));
+
+    // やさしいメッセージ
+    if(fruitGram > 150){
+      careMsg.classList.remove("hidden");
+      careMsg.textContent = "🍓 フルーツが少し多めです。お腹がゆるくなることがあるので、様子を見てあげてね。";
+    } else {
+      careMsg.classList.add("hidden");
+    }
+  }
+
+  function setMeter(prefix, value, max, cls, text, badge){
+    var bar = document.getElementById(prefix+"Bar");
+    var txt = document.getElementById(prefix+"Text");
+    var bdg = document.getElementById(prefix+"Badge");
+    var pct = Math.min(100, Math.round(value/max*100));
+    bar.style.width = pct+"%";
+    bar.className = "bar-fill "+cls;
+    txt.textContent = text;
+    bdg.textContent = badge;
+    bdg.className = "badge "+cls;
+  }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+
+  // 追加
+  function addItem(){
+    var date = datePicker.value;
+    var gram = parseFloat(gramInput.value);
+    if(isNaN(gram) || gram <= 0){
+      alert("量（グラム）を正しく入力してね。");
+      return;
+    }
+
+    var name, per100, type;
+    if(foodSelect.value === "custom"){
+      name = (customName.value || "").trim();
+      per100 = parseFloat(customKcal.value);
+      type = "other"; // 自由入力はフルーツ量に含めない
+      if(!name){ alert("食材の名前を入力してね。"); return; }
+      if(isNaN(per100) || per100 < 0){ alert("カロリーを正しく入力してね。"); return; }
+    } else {
+      var f = FOODS[parseInt(foodSelect.value,10)];
+      name = f.name; per100 = f.kcal; type = f.type;
+    }
+
+    var kcal = Math.round(per100 * gram / 100);
+    var items = load(date);
+    items.push({name:name, gram:gram, kcal:kcal, type:type});
+    save(date, items);
+
+    gramInput.value = "";
+    customName.value = "";
+    customKcal.value = "";
+    render();
+  }
+
+  // イベント
+  foodSelect.addEventListener("change", function(){
+    if(foodSelect.value === "custom"){ customWrap.classList.remove("hidden"); }
+    else { customWrap.classList.add("hidden"); }
+  });
+
+  addBtn.addEventListener("click", addItem);
+
+  listBody.addEventListener("click", function(e){
+    if(e.target.classList.contains("del")){
+      var i = parseInt(e.target.getAttribute("data-i"),10);
+      var date = datePicker.value;
+      var items = load(date);
+      items.splice(i,1);
+      save(date, items);
+      render();
+    }
+  });
+
+  document.getElementById("prevDay").addEventListener("click", function(){
+    datePicker.value = shiftDate(datePicker.value, -1); render();
+  });
+  document.getElementById("nextDay").addEventListener("click", function(){
+    datePicker.value = shiftDate(datePicker.value, 1); render();
+  });
+  datePicker.addEventListener("change", render);
+
+  // 初期化
+  buildSelect();
+  datePicker.value = todayStr();
+  render();
+})();
+</script>
+</body>
+</html>
