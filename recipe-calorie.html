@@ -146,6 +146,23 @@
   }
   .btn-add:active { transform: scale(0.97); box-shadow: 0 1px 4px rgba(255,107,107,0.3); }
 
+  /* 追加前プレビュー */
+  .preview-box {
+    display: none;
+    background: var(--primary-light);
+    border: 1.5px solid var(--primary);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-top: 12px;
+    text-align: center;
+    animation: slideIn 0.2s ease;
+  }
+  .preview-box.show { display: block; }
+  .preview-box .pv-label { font-size: 0.78rem; color: var(--text-sub); font-weight: 600; }
+  .preview-box .pv-kcal { font-size: 1.7rem; font-weight: 800; color: var(--primary); line-height: 1.1; margin: 2px 0; }
+  .preview-box .pv-kcal .pv-unit { font-size: 0.8rem; font-weight: 600; margin-left: 2px; }
+  .preview-box .pv-detail { font-size: 0.82rem; color: var(--text-sub); }
+
   /* 材料リスト */
   .ingredient-list { list-style: none; }
   .ingredient-item {
@@ -293,6 +310,13 @@
       </div>
       <label>カロリー（kcal/100g）</label>
       <input type="number" id="manual-kcal" placeholder="例：200" min="0" step="1" style="margin-bottom:4px;">
+    </div>
+
+    <!-- 追加前プレビュー -->
+    <div class="preview-box" id="preview-box">
+      <div class="pv-label">このまま追加すると</div>
+      <div class="pv-kcal">＝ 約 <span id="preview-kcal">0</span><span class="pv-unit">kcal</span></div>
+      <div class="pv-detail" id="preview-detail"></div>
     </div>
 
     <button class="btn-add" onclick="addIngredient()">＋ 追加する</button>
@@ -467,6 +491,7 @@ function selectFood(name) {
   foodInput.value = food.name;
   closeSuggest();
   updateSpoonNote();
+  updatePreview();
 }
 
 function escHtml(s) {
@@ -483,10 +508,19 @@ function switchMode(mode) {
   document.getElementById('mode-spoon').style.display = mode==='spoon' ? 'block' : 'none';
   document.getElementById('mode-manual').style.display = mode==='manual' ? 'block' : 'none';
   if (mode==='spoon') updateSpoonNote();
+  updatePreview();
 }
 
 document.getElementById('spoon-amount').addEventListener('input', updateSpoonNote);
 document.getElementById('spoon-unit').addEventListener('change', updateSpoonNote);
+
+// プレビュー即時更新のためのイベント登録
+foodInput.addEventListener('input', updatePreview);
+document.getElementById('gram-amount').addEventListener('input', updatePreview);
+document.getElementById('spoon-amount').addEventListener('input', updatePreview);
+document.getElementById('spoon-unit').addEventListener('change', updatePreview);
+document.getElementById('manual-gram').addEventListener('input', updatePreview);
+document.getElementById('manual-kcal').addEventListener('input', updatePreview);
 
 function updateSpoonNote() {
   const note = document.getElementById('spoon-convert-note');
@@ -505,10 +539,12 @@ function updateSpoonNote() {
   }
 }
 
-// ========== 材料追加 ==========
-function addIngredient() {
+// ========== 計算ロジック（プレビューと追加で共通） ==========
+// 成功時: { ok:true, name, displayAmount, gramWeight, kcalPer100g, totalKcal }
+// 計算不成立時: { ok:false, reason }（reason は追加時のみ alert に使用）
+function computeEntry() {
   const name = foodInput.value.trim();
-  if (!name) { alert('食品名を入力してください'); foodInput.focus(); return; }
+  if (!name) { return { ok:false, reason:'食品名を入力してください', focusName:true }; }
 
   let gramWeight = 0;
   let displayAmount = '';
@@ -516,29 +552,26 @@ function addIngredient() {
 
   if (currentMode === 'gram') {
     const gVal = parseFloat(document.getElementById('gram-amount').value);
-    if (!gVal || gVal <= 0) { alert('量を入力してください'); return; }
+    if (!gVal || gVal <= 0) { return { ok:false, reason:'量を入力してください' }; }
     gramWeight = gVal;
     displayAmount = `${gVal} g`;
     if (selectedFood && selectedFood.name === name) {
       kcalPer100g = selectedFood.kcal;
     } else {
-      alert('食品を候補リストから選ぶか、「その他」モードでkcal/100gを入力してください');
-      return;
+      return { ok:false, reason:'食品を候補リストから選ぶか、「その他」モードでkcal/100gを入力してください' };
     }
 
   } else if (currentMode === 'spoon') {
     const qty = parseFloat(document.getElementById('spoon-amount').value);
-    if (!qty || qty <= 0) { alert('量を入力してください'); return; }
+    if (!qty || qty <= 0) { return { ok:false, reason:'量を入力してください' }; }
     if (!selectedFood || selectedFood.name !== name) {
-      alert('食品を候補リストから選んでください');
-      return;
+      return { ok:false, reason:'食品を候補リストから選んでください' };
     }
     const unit = document.getElementById('spoon-unit').value;
     const unitLabel = unit === 'tablespoon' ? '大さじ' : '小さじ';
     const gPerUnit = unit === 'tablespoon' ? selectedFood.tbs : selectedFood.tsp;
     if (!gPerUnit) {
-      alert(`${name} は${unitLabel}換算データがありません。グラム入力をご利用ください。`);
-      return;
+      return { ok:false, reason:`${name} は${unitLabel}換算データがありません。グラム入力をご利用ください。` };
     }
     gramWeight = qty * gPerUnit;
     displayAmount = `${unitLabel} ${qty} (≈${gramWeight.toFixed(1)}g)`;
@@ -547,8 +580,8 @@ function addIngredient() {
   } else { // manual
     const gVal = parseFloat(document.getElementById('manual-gram').value);
     const kcalVal = parseFloat(document.getElementById('manual-kcal').value);
-    if (!gVal || gVal <= 0) { alert('量（g）を入力してください'); return; }
-    if (isNaN(kcalVal) || kcalVal < 0) { alert('kcal/100g を入力してください'); return; }
+    if (!gVal || gVal <= 0) { return { ok:false, reason:'量（g）を入力してください' }; }
+    if (isNaN(kcalVal) || kcalVal < 0) { return { ok:false, reason:'kcal/100g を入力してください' }; }
     gramWeight = gVal;
     displayAmount = `${gVal} g`;
     kcalPer100g = kcalVal;
@@ -556,13 +589,45 @@ function addIngredient() {
 
   const totalKcal = kcalPer100g * gramWeight / 100;
 
-  ingredients.push({
-    id: Date.now(),
+  return {
+    ok: true,
     name: name,
     displayAmount: displayAmount,
     gramWeight: gramWeight,
     kcalPer100g: kcalPer100g,
     totalKcal: totalKcal,
+  };
+}
+
+// ========== 追加前プレビュー ==========
+function updatePreview() {
+  const box = document.getElementById('preview-box');
+  const entry = computeEntry();
+  if (!entry.ok) {
+    box.classList.remove('show');
+    return;
+  }
+  document.getElementById('preview-kcal').textContent = Math.round(entry.totalKcal).toLocaleString();
+  document.getElementById('preview-detail').textContent = `${entry.name}　${entry.displayAmount}`;
+  box.classList.add('show');
+}
+
+// ========== 材料追加 ==========
+function addIngredient() {
+  const entry = computeEntry();
+  if (!entry.ok) {
+    alert(entry.reason);
+    if (entry.focusName) foodInput.focus();
+    return;
+  }
+
+  ingredients.push({
+    id: Date.now(),
+    name: entry.name,
+    displayAmount: entry.displayAmount,
+    gramWeight: entry.gramWeight,
+    kcalPer100g: entry.kcalPer100g,
+    totalKcal: entry.totalKcal,
   });
 
   renderList();
@@ -578,6 +643,7 @@ function resetInput() {
   document.getElementById('manual-kcal').value = '';
   document.getElementById('spoon-convert-note').textContent = '';
   selectedFood = null;
+  document.getElementById('preview-box').classList.remove('show');
 }
 
 // ========== リスト描画 ==========
