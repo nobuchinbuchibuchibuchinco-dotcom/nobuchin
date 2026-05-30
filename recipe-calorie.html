@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>手作り料理カロリー計算</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --primary: #ff6b6b;
+    --primary-light: #fff0f0;
+    --accent: #ffa94d;
+    --bg: #f8f9fa;
+    --card: #ffffff;
+    --text: #333;
+    --text-sub: #666;
+    --border: #e0e0e0;
+    --shadow: 0 2px 8px rgba(0,0,0,0.08);
+    --radius: 12px;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Kaku Gothic ProN', 'メイリオ', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 16px;
+    min-height: 100vh;
+    padding-bottom: 140px;
+  }
+
+  header {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+    color: white;
+    padding: 18px 16px 14px;
+    text-align: center;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 8px rgba(255,107,107,0.3);
+  }
+  header h1 { font-size: 1.2rem; font-weight: 700; }
+  header p { font-size: 0.78rem; opacity: 0.9; margin-top: 2px; }
+
+  .container { padding: 16px; max-width: 600px; margin: 0 auto; }
+
+  /* カード共通 */
+  .card {
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 16px;
+    margin-bottom: 14px;
+  }
+  .card-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--primary);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .card-title::before { content: attr(data-icon); font-size: 1rem; }
+
+  /* 入力グループ */
+  label { display: block; font-size: 0.82rem; color: var(--text-sub); margin-bottom: 4px; font-weight: 600; }
+
+  input[type="text"],
+  input[type="number"],
+  select {
+    width: 100%;
+    height: 48px;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 0 12px;
+    font-size: 1rem;
+    font-family: inherit;
+    color: var(--text);
+    background: white;
+    outline: none;
+    transition: border-color 0.2s;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  input:focus, select:focus { border-color: var(--primary); }
+  select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23999' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; }
+
+  /* サジェスト */
+  .suggest-wrap { position: relative; }
+  .suggest-list {
+    position: absolute;
+    left: 0; right: 0; top: calc(100% + 4px);
+    background: white;
+    border: 1.5px solid var(--primary);
+    border-radius: 10px;
+    z-index: 200;
+    max-height: 240px;
+    overflow-y: auto;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    display: none;
+  }
+  .suggest-list.open { display: block; }
+  .suggest-item {
+    padding: 12px 14px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.95rem;
+  }
+  .suggest-item:last-child { border-bottom: none; }
+  .suggest-item:hover, .suggest-item.active { background: var(--primary-light); }
+  .suggest-item .kcal { font-size: 0.8rem; color: var(--text-sub); }
+  .suggest-cat { font-size: 0.72rem; color: #aaa; padding: 6px 14px 4px; background: var(--bg); font-weight: 700; }
+
+  /* 入力モード切り替え */
+  .mode-tabs { display: flex; gap: 8px; margin-bottom: 12px; }
+  .mode-tab {
+    flex: 1; height: 40px; border: 1.5px solid var(--border);
+    border-radius: 8px; background: white; font-size: 0.9rem; font-weight: 600;
+    cursor: pointer; color: var(--text-sub); transition: all 0.2s; font-family: inherit;
+  }
+  .mode-tab.active { border-color: var(--primary); background: var(--primary-light); color: var(--primary); }
+
+  /* 量入力エリア */
+  .amount-row { display: flex; gap: 8px; align-items: flex-end; }
+  .amount-row .field { flex: 1; }
+  .amount-row .field-unit { width: 90px; flex-shrink: 0; }
+
+  /* 手動入力 */
+  .manual-section { display: none; }
+  .manual-section.show { display: block; }
+  .manual-row { display: flex; gap: 8px; }
+  .manual-row .field { flex: 1; }
+
+  /* 追加ボタン */
+  .btn-add {
+    width: 100%; height: 52px; border-radius: 12px;
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    color: white; border: none; font-size: 1.05rem; font-weight: 700;
+    cursor: pointer; font-family: inherit; margin-top: 4px;
+    box-shadow: 0 3px 10px rgba(255,107,107,0.35);
+    transition: transform 0.1s, box-shadow 0.1s;
+  }
+  .btn-add:active { transform: scale(0.97); box-shadow: 0 1px 4px rgba(255,107,107,0.3); }
+
+  /* 材料リスト */
+  .ingredient-list { list-style: none; }
+  .ingredient-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 11px 0;
+    border-bottom: 1px solid var(--border);
+    animation: slideIn 0.2s ease;
+  }
+  .ingredient-item:last-child { border-bottom: none; }
+  @keyframes slideIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+  .ing-info { flex: 1; min-width: 0; }
+  .ing-name { font-size: 0.97rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ing-amount { font-size: 0.8rem; color: var(--text-sub); margin-top: 1px; }
+  .ing-kcal { font-size: 1rem; font-weight: 700; color: var(--primary); white-space: nowrap; }
+  .btn-del {
+    width: 36px; height: 36px; border-radius: 50%;
+    border: none; background: #f5f5f5; color: #999;
+    font-size: 1.1rem; cursor: pointer; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s, color 0.2s;
+  }
+  .btn-del:hover { background: #ffe0e0; color: var(--primary); }
+
+  .empty-state { text-align: center; padding: 24px 0; color: #bbb; font-size: 0.9rem; }
+
+  /* 人数入力 */
+  .serving-row { display: flex; align-items: center; gap: 10px; }
+  .serving-label { font-size: 0.95rem; white-space: nowrap; }
+  .serving-row input { width: 70px; text-align: center; flex-shrink: 0; }
+  .serving-unit { font-size: 0.95rem; color: var(--text-sub); white-space: nowrap; }
+
+  /* フッター固定表示 */
+  .result-footer {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: white;
+    border-top: 1.5px solid var(--border);
+    box-shadow: 0 -4px 16px rgba(0,0,0,0.08);
+    z-index: 100;
+    padding: 12px 16px;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+  /* fixedはmax-widthが効かないので別途 */
+  @media (min-width: 600px) {
+    .result-footer { left: 50%; right: auto; transform: translateX(-50%); width: 600px; }
+  }
+
+  .result-grid { display: flex; gap: 10px; }
+  .result-box {
+    flex: 1; border-radius: 10px; padding: 10px 12px; text-align: center;
+  }
+  .result-box.total { background: linear-gradient(135deg, var(--primary), var(--accent)); color: white; }
+  .result-box.per { background: var(--primary-light); color: var(--primary); }
+  .result-box .r-label { font-size: 0.72rem; font-weight: 700; opacity: 0.85; margin-bottom: 2px; }
+  .result-box .r-value { font-size: 1.6rem; font-weight: 800; line-height: 1; }
+  .result-box .r-unit { font-size: 0.75rem; font-weight: 600; margin-left: 2px; opacity: 0.85; }
+
+  .footer-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .footer-row .serving-wrap { display: flex; align-items: center; gap: 6px; flex: 1; }
+  .footer-row .serving-wrap label { font-size: 0.82rem; color: var(--text-sub); white-space: nowrap; margin: 0; font-weight: 600; }
+  .footer-row .serving-wrap input { width: 60px; height: 38px; text-align: center; font-size: 1rem; }
+  .footer-row .serving-unit { font-size: 0.82rem; color: var(--text-sub); }
+  .btn-clear {
+    height: 38px; padding: 0 16px; border-radius: 8px;
+    border: 1.5px solid var(--border); background: white;
+    font-size: 0.85rem; font-weight: 600; color: var(--text-sub);
+    cursor: pointer; font-family: inherit; white-space: nowrap;
+  }
+  .btn-clear:hover { border-color: var(--primary); color: var(--primary); }
+
+  /* 注意メッセージ */
+  .notice { font-size: 0.72rem; color: #aaa; text-align: center; padding: 4px 0 0; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🍳 手作り料理カロリー計算</h1>
+  <p>材料を入力して合計カロリーを計算しよう</p>
+</header>
+
+<div class="container">
+
+  <!-- 材料入力カード -->
+  <div class="card">
+    <div class="card-title" data-icon="🥕">材料を追加</div>
+
+    <!-- 食品名 -->
+    <div style="margin-bottom:12px;">
+      <label for="food-input">食品名</label>
+      <div class="suggest-wrap">
+        <input type="text" id="food-input" placeholder="例：小麦粉、卵、バター…" autocomplete="off">
+        <div class="suggest-list" id="suggest-list"></div>
+      </div>
+    </div>
+
+    <!-- 入力モード切り替え -->
+    <div class="mode-tabs">
+      <button class="mode-tab active" id="tab-gram" onclick="switchMode('gram')">グラム入力</button>
+      <button class="mode-tab" id="tab-spoon" onclick="switchMode('spoon')">大さじ・小さじ</button>
+      <button class="mode-tab" id="tab-manual" onclick="switchMode('manual')">その他</button>
+    </div>
+
+    <!-- グラム入力 -->
+    <div id="mode-gram">
+      <label>量</label>
+      <div class="amount-row">
+        <div class="field">
+          <input type="number" id="gram-amount" placeholder="0" min="0" step="0.1">
+        </div>
+        <div class="field-unit">
+          <input type="text" value="g" disabled style="background:#f5f5f5;color:#999;text-align:center;">
+        </div>
+      </div>
+    </div>
+
+    <!-- 大さじ・小さじ入力 -->
+    <div id="mode-spoon" style="display:none;">
+      <label>量</label>
+      <div class="amount-row">
+        <div class="field">
+          <input type="number" id="spoon-amount" placeholder="0" min="0" step="0.5">
+        </div>
+        <div class="field-unit">
+          <select id="spoon-unit">
+            <option value="tablespoon">大さじ</option>
+            <option value="teaspoon">小さじ</option>
+          </select>
+        </div>
+      </div>
+      <div id="spoon-convert-note" style="font-size:0.78rem;color:#aaa;margin-top:5px;min-height:18px;"></div>
+    </div>
+
+    <!-- その他（手動kcal/100g） -->
+    <div id="mode-manual" style="display:none;">
+      <label>量（g）</label>
+      <div class="amount-row" style="margin-bottom:10px;">
+        <div class="field">
+          <input type="number" id="manual-gram" placeholder="0" min="0" step="0.1">
+        </div>
+        <div class="field-unit">
+          <input type="text" value="g" disabled style="background:#f5f5f5;color:#999;text-align:center;">
+        </div>
+      </div>
+      <label>カロリー（kcal/100g）</label>
+      <input type="number" id="manual-kcal" placeholder="例：200" min="0" step="1" style="margin-bottom:4px;">
+    </div>
+
+    <button class="btn-add" onclick="addIngredient()">＋ 追加する</button>
+  </div>
+
+  <!-- 材料リストカード -->
+  <div class="card">
+    <div class="card-title" data-icon="📋">追加した材料</div>
+    <ul class="ingredient-list" id="ingredient-list">
+      <li class="empty-state" id="empty-state">まだ材料が追加されていません</li>
+    </ul>
+  </div>
+
+</div><!-- /container -->
+
+<!-- フッター固定結果表示 -->
+<div class="result-footer">
+  <div class="footer-row">
+    <div class="serving-wrap">
+      <label for="serving-input">何人分？</label>
+      <input type="number" id="serving-input" value="1" min="1" step="1" oninput="updateResult()">
+      <span class="footer-unit" style="font-size:0.82rem;color:#999;">人分</span>
+    </div>
+    <button class="btn-clear" onclick="clearAll()">🗑 クリア</button>
+  </div>
+  <div class="result-grid">
+    <div class="result-box total">
+      <div class="r-label">合計カロリー</div>
+      <div class="r-value"><span id="total-kcal">0</span><span class="r-unit">kcal</span></div>
+    </div>
+    <div class="result-box per">
+      <div class="r-label">1人分カロリー</div>
+      <div class="r-value"><span id="per-kcal">0</span><span class="r-unit">kcal</span></div>
+    </div>
+  </div>
+  <div class="notice">※ カロリー値は目安です。食品ごとに多少の差があります。</div>
+</div>
+
+<script>
+// ========== 食品データベース ==========
+const FOODS = [
+  // 穀物・粉類
+  { cat:'穀物・粉類', name:'精白米（炊く前）',     kcal:342, tbs:null, tsp:null },
+  { cat:'穀物・粉類', name:'ごはん（炊いた後）',   kcal:156, tbs:null, tsp:null },
+  { cat:'穀物・粉類', name:'小麦粉（薄力粉）',     kcal:349, tbs:9,   tsp:3   },
+  { cat:'穀物・粉類', name:'小麦粉（強力粉）',     kcal:365, tbs:9,   tsp:3   },
+  { cat:'穀物・粉類', name:'片栗粉',               kcal:330, tbs:9,   tsp:3   },
+  { cat:'穀物・粉類', name:'米粉',                 kcal:356, tbs:9,   tsp:3   },
+  { cat:'穀物・粉類', name:'コーンスターチ',       kcal:354, tbs:6,   tsp:2   },
+  { cat:'穀物・粉類', name:'パン粉（生）',         kcal:280, tbs:3,   tsp:1   },
+  { cat:'穀物・粉類', name:'ベーキングパウダー',   kcal:127, tbs:12,  tsp:4   },
+  { cat:'穀物・粉類', name:'重曹',                 kcal:0,   tbs:12,  tsp:4   },
+
+  // 砂糖・甘味料
+  { cat:'砂糖・甘味料', name:'上白糖（砂糖）',     kcal:384, tbs:9,   tsp:3   },
+  { cat:'砂糖・甘味料', name:'グラニュー糖',       kcal:387, tbs:12,  tsp:4   },
+  { cat:'砂糖・甘味料', name:'はちみつ',           kcal:294, tbs:21,  tsp:7   },
+  { cat:'砂糖・甘味料', name:'メープルシロップ',   kcal:257, tbs:21,  tsp:7   },
+
+  // 油脂・乳製品
+  { cat:'油脂・乳製品', name:'バター（有塩）',     kcal:700, tbs:12,  tsp:4   },
+  { cat:'油脂・乳製品', name:'マーガリン',         kcal:715, tbs:12,  tsp:4   },
+  { cat:'油脂・乳製品', name:'サラダ油・オリーブ油', kcal:921, tbs:12, tsp:4  },
+  { cat:'油脂・乳製品', name:'生クリーム（乳脂肪35%）', kcal:339, tbs:null, tsp:null },
+  { cat:'油脂・乳製品', name:'牛乳',               kcal:61,  tbs:null, tsp:null },
+  { cat:'油脂・乳製品', name:'卵（全卵）',         kcal:142, tbs:null, tsp:null },
+  { cat:'油脂・乳製品', name:'卵黄',               kcal:336, tbs:null, tsp:null },
+  { cat:'油脂・乳製品', name:'卵白',               kcal:44,  tbs:null, tsp:null },
+  { cat:'油脂・乳製品', name:'クリームチーズ',     kcal:313, tbs:null, tsp:null },
+  { cat:'油脂・乳製品', name:'プレーンヨーグルト', kcal:56,  tbs:null, tsp:null },
+
+  // チョコ・製菓材料
+  { cat:'チョコ・製菓材料', name:'チョコレート（ミルク）', kcal:550, tbs:null, tsp:null },
+  { cat:'チョコ・製菓材料', name:'ダークチョコレート',     kcal:530, tbs:null, tsp:null },
+  { cat:'チョコ・製菓材料', name:'ホワイトチョコレート',   kcal:558, tbs:null, tsp:null },
+  { cat:'チョコ・製菓材料', name:'ココアパウダー（純）',   kcal:271, tbs:6,   tsp:2   },
+  { cat:'チョコ・製菓材料', name:'アーモンドプードル',     kcal:608, tbs:null, tsp:null },
+  { cat:'チョコ・製菓材料', name:'くるみ',               kcal:674, tbs:null, tsp:null },
+  { cat:'チョコ・製菓材料', name:'レーズン',             kcal:301, tbs:null, tsp:null },
+
+  // 野菜・肉・魚
+  { cat:'野菜・肉・魚', name:'じゃがいも',         kcal:76,  tbs:null, tsp:null },
+  { cat:'野菜・肉・魚', name:'にんじん',           kcal:37,  tbs:null, tsp:null },
+  { cat:'野菜・肉・魚', name:'たまねぎ',           kcal:33,  tbs:null, tsp:null },
+  { cat:'野菜・肉・魚', name:'キャベツ',           kcal:21,  tbs:null, tsp:null },
+  { cat:'野菜・肉・魚', name:'トマト',             kcal:20,  tbs:null, tsp:null },
+  { cat:'野菜・肉・魚', name:'ほうれん草',         kcal:18,  tbs:null, tsp:null },
+  { cat:'野菜・肉・魚', name:'豚バラ肉',           kcal:395, tbs:null, tsp:null },
+  { cat:'野菜・肉・魚', name:'鶏むね肉（皮なし）', kcal:105, tbs:null, tsp:null },
+  { cat:'野菜・肉・魚', name:'鶏もも肉（皮あり）', kcal:204, tbs:null, tsp:null },
+  { cat:'野菜・肉・魚', name:'牛肉（肩ロース）',   kcal:240, tbs:null, tsp:null },
+  { cat:'野菜・肉・魚', name:'鮭',                 kcal:133, tbs:null, tsp:null },
+  { cat:'野菜・肉・魚', name:'エビ',               kcal:82,  tbs:null, tsp:null },
+
+  // 調味料
+  { cat:'調味料', name:'しょうゆ',   kcal:60,  tbs:18, tsp:6  },
+  { cat:'調味料', name:'みそ',       kcal:186, tbs:18, tsp:6  },
+  { cat:'調味料', name:'みりん',     kcal:241, tbs:18, tsp:6  },
+  { cat:'調味料', name:'酒',         kcal:109, tbs:15, tsp:5  },
+  { cat:'調味料', name:'酢',         kcal:25,  tbs:15, tsp:5  },
+  { cat:'調味料', name:'マヨネーズ', kcal:668, tbs:12, tsp:4  },
+  { cat:'調味料', name:'ケチャップ', kcal:119, tbs:15, tsp:5  },
+];
+
+// ========== 状態 ==========
+let ingredients = [];
+let currentMode = 'gram';
+let selectedFood = null; // 選択中の食品オブジェクト
+let suggestOpen = false;
+
+// ========== サジェスト ==========
+const foodInput = document.getElementById('food-input');
+const suggestList = document.getElementById('suggest-list');
+
+foodInput.addEventListener('input', function() {
+  const q = this.value.trim();
+  if (!q) { closeSuggest(); selectedFood = null; return; }
+  showSuggest(q);
+});
+
+foodInput.addEventListener('focus', function() {
+  const q = this.value.trim();
+  if (q) showSuggest(q);
+});
+
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.suggest-wrap')) closeSuggest();
+});
+
+function showSuggest(q) {
+  const lower = q.toLowerCase();
+  // カテゴリ別にグルーピング
+  const catMap = {};
+  FOODS.forEach(f => {
+    if (f.name.includes(q) || f.name.toLowerCase().includes(lower)) {
+      if (!catMap[f.cat]) catMap[f.cat] = [];
+      catMap[f.cat].push(f);
+    }
+  });
+
+  const cats = Object.keys(catMap);
+  if (cats.length === 0) { closeSuggest(); return; }
+
+  let html = '';
+  cats.forEach(cat => {
+    html += `<div class="suggest-cat">${cat}</div>`;
+    catMap[cat].forEach(f => {
+      html += `<div class="suggest-item" data-name="${escHtml(f.name)}" onclick="selectFood('${escHtml(f.name)}')">
+        <span>${escHtml(f.name)}</span>
+        <span class="kcal">${f.kcal} kcal/100g</span>
+      </div>`;
+    });
+  });
+  suggestList.innerHTML = html;
+  suggestList.classList.add('open');
+  suggestOpen = true;
+}
+
+function closeSuggest() {
+  suggestList.classList.remove('open');
+  suggestOpen = false;
+}
+
+function selectFood(name) {
+  const food = FOODS.find(f => f.name === name);
+  if (!food) return;
+  selectedFood = food;
+  foodInput.value = food.name;
+  closeSuggest();
+  updateSpoonNote();
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ========== モード切り替え ==========
+function switchMode(mode) {
+  currentMode = mode;
+  document.getElementById('tab-gram').classList.toggle('active', mode==='gram');
+  document.getElementById('tab-spoon').classList.toggle('active', mode==='spoon');
+  document.getElementById('tab-manual').classList.toggle('active', mode==='manual');
+  document.getElementById('mode-gram').style.display = mode==='gram' ? 'block' : 'none';
+  document.getElementById('mode-spoon').style.display = mode==='spoon' ? 'block' : 'none';
+  document.getElementById('mode-manual').style.display = mode==='manual' ? 'block' : 'none';
+  if (mode==='spoon') updateSpoonNote();
+}
+
+document.getElementById('spoon-amount').addEventListener('input', updateSpoonNote);
+document.getElementById('spoon-unit').addEventListener('change', updateSpoonNote);
+
+function updateSpoonNote() {
+  const note = document.getElementById('spoon-convert-note');
+  if (!selectedFood) { note.textContent = '※ 食品を選択するとグラム換算が表示されます'; return; }
+  const qty = parseFloat(document.getElementById('spoon-amount').value) || 0;
+  const unit = document.getElementById('spoon-unit').value;
+  const gPerUnit = unit === 'tablespoon' ? selectedFood.tbs : selectedFood.tsp;
+  const unitLabel = unit === 'tablespoon' ? '大さじ' : '小さじ';
+  if (!gPerUnit) {
+    note.textContent = `※ ${selectedFood.name} は${unitLabel}換算データなし（グラム入力をご利用ください）`;
+    note.style.color = '#e67e22';
+  } else {
+    const totalG = qty * gPerUnit;
+    note.textContent = `= 約 ${totalG.toFixed(1)} g`;
+    note.style.color = '#aaa';
+  }
+}
+
+// ========== 材料追加 ==========
+function addIngredient() {
+  const name = foodInput.value.trim();
+  if (!name) { alert('食品名を入力してください'); foodInput.focus(); return; }
+
+  let gramWeight = 0;
+  let displayAmount = '';
+  let kcalPer100g = 0;
+
+  if (currentMode === 'gram') {
+    const gVal = parseFloat(document.getElementById('gram-amount').value);
+    if (!gVal || gVal <= 0) { alert('量を入力してください'); return; }
+    gramWeight = gVal;
+    displayAmount = `${gVal} g`;
+    if (selectedFood && selectedFood.name === name) {
+      kcalPer100g = selectedFood.kcal;
+    } else {
+      alert('食品を候補リストから選ぶか、「その他」モードでkcal/100gを入力してください');
+      return;
+    }
+
+  } else if (currentMode === 'spoon') {
+    const qty = parseFloat(document.getElementById('spoon-amount').value);
+    if (!qty || qty <= 0) { alert('量を入力してください'); return; }
+    if (!selectedFood || selectedFood.name !== name) {
+      alert('食品を候補リストから選んでください');
+      return;
+    }
+    const unit = document.getElementById('spoon-unit').value;
+    const unitLabel = unit === 'tablespoon' ? '大さじ' : '小さじ';
+    const gPerUnit = unit === 'tablespoon' ? selectedFood.tbs : selectedFood.tsp;
+    if (!gPerUnit) {
+      alert(`${name} は${unitLabel}換算データがありません。グラム入力をご利用ください。`);
+      return;
+    }
+    gramWeight = qty * gPerUnit;
+    displayAmount = `${unitLabel} ${qty} (≈${gramWeight.toFixed(1)}g)`;
+    kcalPer100g = selectedFood.kcal;
+
+  } else { // manual
+    const gVal = parseFloat(document.getElementById('manual-gram').value);
+    const kcalVal = parseFloat(document.getElementById('manual-kcal').value);
+    if (!gVal || gVal <= 0) { alert('量（g）を入力してください'); return; }
+    if (isNaN(kcalVal) || kcalVal < 0) { alert('kcal/100g を入力してください'); return; }
+    gramWeight = gVal;
+    displayAmount = `${gVal} g`;
+    kcalPer100g = kcalVal;
+  }
+
+  const totalKcal = kcalPer100g * gramWeight / 100;
+
+  ingredients.push({
+    id: Date.now(),
+    name: name,
+    displayAmount: displayAmount,
+    gramWeight: gramWeight,
+    kcalPer100g: kcalPer100g,
+    totalKcal: totalKcal,
+  });
+
+  renderList();
+  updateResult();
+  resetInput();
+}
+
+function resetInput() {
+  foodInput.value = '';
+  document.getElementById('gram-amount').value = '';
+  document.getElementById('spoon-amount').value = '';
+  document.getElementById('manual-gram').value = '';
+  document.getElementById('manual-kcal').value = '';
+  document.getElementById('spoon-convert-note').textContent = '';
+  selectedFood = null;
+}
+
+// ========== リスト描画 ==========
+function renderList() {
+  const ul = document.getElementById('ingredient-list');
+  const empty = document.getElementById('empty-state');
+
+  if (ingredients.length === 0) {
+    ul.innerHTML = '<li class="empty-state" id="empty-state">まだ材料が追加されていません</li>';
+    return;
+  }
+
+  ul.innerHTML = ingredients.map(ing => `
+    <li class="ingredient-item">
+      <div class="ing-info">
+        <div class="ing-name">${escHtml(ing.name)}</div>
+        <div class="ing-amount">${escHtml(ing.displayAmount)}</div>
+      </div>
+      <div class="ing-kcal">${Math.round(ing.totalKcal)} kcal</div>
+      <button class="btn-del" onclick="removeIngredient(${ing.id})" aria-label="削除">✕</button>
+    </li>
+  `).join('');
+}
+
+function removeIngredient(id) {
+  ingredients = ingredients.filter(i => i.id !== id);
+  renderList();
+  updateResult();
+}
+
+// ========== 計算結果 ==========
+function updateResult() {
+  const total = ingredients.reduce((s, i) => s + i.totalKcal, 0);
+  const serving = Math.max(1, parseInt(document.getElementById('serving-input').value) || 1);
+  const per = total / serving;
+
+  document.getElementById('total-kcal').textContent = Math.round(total).toLocaleString();
+  document.getElementById('per-kcal').textContent = Math.round(per).toLocaleString();
+}
+
+function clearAll() {
+  if (ingredients.length === 0) return;
+  if (!confirm('すべての材料をクリアしますか？')) return;
+  ingredients = [];
+  document.getElementById('serving-input').value = 1;
+  renderList();
+  updateResult();
+  resetInput();
+}
+
+// ========== 初期化 ==========
+updateResult();
+</script>
+</body>
+</html>
